@@ -1,3 +1,11 @@
+/*
+ * Put states in an object, since they change frequency.
+ * Only would need to look at one place to see how states
+ * are being mutated.
+ * 
+ * One object that deals with sending messages
+ */
+
 #define IR_LED_PIN 9 // Digital Pin 9 corresponds to ATmega328p's PB1 pin
 #define MARK_FREQ 2295 // Frequency for logical 1 (mark)
 #define SPACE_FREQ 2125 // Frequency for logical 0 (space)
@@ -81,11 +89,11 @@ void loop() {
   delay(5000);
 }
 
-void transmitMessage(const char* msg) {
+ void transmitMessage(const char* msg) {
   message = msg;
   currentByte = *message;
   bitCount = 0;
   isStartBit = true;
   transmitting = true;
-  TIMSK2 |= (1 << OCIE2A); // Enable Timer2 interrupt
+  TIMSK2 |= (1 << OCIE2A); // Enable Timer2 interrupt (turn this into a function)
 }
