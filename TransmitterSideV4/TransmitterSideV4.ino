@@ -47,34 +47,36 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 ISR(TIMER2_COMPA_vect) {
-  if (transmitting) {
-    if (isStartBit) {
-      // Transmit start bit (logical 0)
-      OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency
-      isStartBit = false;
-    } else if (bitCount < 8) {
-      // Transmit data bits (LSB first)
-      if (currentByte & (1 << bitCount)) {
-        OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
-        Serial.print("1");
-      } else {
-        OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency
-        Serial.print("0");
-      }
-      bitCount++;
+  if (!transmitting) {
+    return;
+  }
+  
+  if (isStartBit) {
+    // Transmit start bit (logical 0)
+    OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency (make this a function)
+    isStartBit = false;
+  }else if (bitCount < 8) {
+    // Transmit data bits (LSB first)
+    if (currentByte & (1 << bitCount)) {
+      OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency (make this a function)
+      Serial.print("1");
     } else {
-      Serial.print(" ");
-      // Transmit stop bit (logical 1)
-      OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
-      bitCount = 0;
-      message++;
-      if (*message) {
-        currentByte = *message;
-        isStartBit = true;
-      } else {
-        transmitting = false;
-        TIMSK2 &= ~(1 << OCIE2A); // Disable Timer2 interrupt
-      }
+      OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency (make this a function)
+      Serial.print("0");
+    }
+    bitCount++;
+  } else {
+    Serial.print(" ");
+    // Transmit stop bit (logical 1)
+    OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
+    bitCount = 0;
+    message++;
+    if (*message) {
+      currentByte = *message;
+      isStartBit = true;
+    } else {
+      transmitting = false;
+      TIMSK2 &= ~(1 << OCIE2A); // Disable Timer2 interrupt
     }
   }
 }
@@ -89,11 +91,15 @@ void loop() {
   delay(5000);
 }
 
- void transmitMessage(const char* msg) {
+void enableTimer2() {
+  TIMSK2 |= (1 << OCIE2A); // Enable Timer2 interrupt (consider making OCIE2A a parameter)
+}
+ 
+void transmitMessage(const char* msg) {
   message = msg;
   currentByte = *message;
   bitCount = 0;
   isStartBit = true;
   transmitting = true;
-  TIMSK2 |= (1 << OCIE2A); // Enable Timer2 interrupt (turn this into a function)
+  enableTimer2();
 }
