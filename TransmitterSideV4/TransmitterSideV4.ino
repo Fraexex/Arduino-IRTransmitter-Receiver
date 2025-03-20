@@ -87,7 +87,7 @@ void timer1MarkSpace() {
   TCCR1A = 0; // Clear Timer1 control register A
   TCCR1B = 0; // Clear Timer1 control register B
   TCCR1B |= (1 << WGM12); // Set CTC mode
-  TCCR1B |= ~(1 << CS10) | (1 << CS11) | ~(1 << CS12); // Set prescaler to 8
+  TCCR1B |= (1 << CS11); // Set prescaler to 8
 }
 
 void setTimer1MarkFreq() {

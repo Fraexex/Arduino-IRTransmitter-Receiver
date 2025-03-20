@@ -36,7 +36,7 @@ void setup() {
   TCCR2A = 0;
   TCCR2B = 0;
   TCCR2B |= (1 << CS21); // Set prescaler to 8
-  OCR2A = (F_CPU / 8 / 1000000) * PULSE_DURATION - 1; // Set Timer2 compare value for pulse duration
+  OCR2A = (F_CPU / 16 / 1000000) * PULSE_DURATION - 1; // Set Timer2 compare value for pulse duration
 
   // Set interrupt global enable flag bit (re-enable interrupts after being disabled).
   sei();
@@ -52,7 +52,7 @@ ISR(TIMER2_COMPA_vect) {
       // End of pulse
       PORTB &= ~(1 << PORTB1); // Set PB1 LOW
       pulseActive = false;
-      OCR2A = (F_CPU / 8 / 1000000) * SPACE_DURATION - 1; // Set Timer2 compare value for space duration
+      OCR2A = (F_CPU / 16 / 1000000) * SPACE_DURATION - 1; // Set Timer2 compare value for space duration
     } else {
       // End of space
       if (bitCount < 8) {
@@ -60,7 +60,7 @@ ISR(TIMER2_COMPA_vect) {
           // Start pulse
           PORTB |= (1 << PORTB1); // Set PB1 HIGH
           pulseActive = true;
-          OCR2A = (F_CPU / 8 / 1000000) * PULSE_DURATION - 1; // Set Timer2 compare value for pulse duration
+          OCR2A = (F_CPU / 16 / 1000000) * PULSE_DURATION - 1; // Set Timer2 compare value for pulse duration
         }
         bitCount++;
       } else {
@@ -84,7 +84,7 @@ void loop() {
     // Wait for transmission to complete
   }
   Serial.println("Message transmitted successfully");
-  delay(5000);
+  //delay(5000);
 }
 
 void transmitMessage(const char* msg) {
