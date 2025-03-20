@@ -7,8 +7,8 @@
  */
 
 #define IR_LED_PIN 9 // Digital Pin 9 corresponds to ATmega328p's PB1 pin
-#define MARK_FREQ 2295 // Frequency for logical 1 (mark)
-#define SPACE_FREQ 2125 // Frequency for logical 0 (space)
+#define MARK_FREQ 34425 // Frequency for logical 1 (mark)
+#define SPACE_FREQ 31875 // Frequency for logical 0 (space)
 #define BAUD_RATE 45.45 // Baud rate (bits per second)
 #define BIT_DURATION (1000000 / BAUD_RATE) // Bit duration in microseconds (22 ms)
 
