@@ -8,13 +8,13 @@
  */
 
 #define IR_LED_PIN 9 // Digital Pin 9 corresponds to ATmega328p's PB1 pin
-#define MARK_FREQ 2295 // Frequency for logical 1 (mark)
-#define SPACE_FREQ 2125 // Frequency for logical 0 (space)
+#define MARK_FREQ 0.5 // Frequency for logical 1 (mark)
+#define SPACE_FREQ 0.4 // Frequency for logical 0 (space)
 #define BAUD_RATE 45.45 // Baud rate (bits per second)
 #define BIT_DURATION (1000000 / BAUD_RATE) // Bit duration in microseconds (22 ms)
 
 volatile bool transmitting = false;
-volatile uint8_t currentByte = 0;
+volatile char currentByte = 0;
 volatile uint8_t bitCount = 0;
 volatile const char *message = NULL;
 volatile bool isStartBit = true;
@@ -70,9 +70,11 @@ ISR(TIMER2_COMPA_vect) {
       bitCount = 0;
       message++;
       if (*message) {
+        Serial.print(" Moving to next character ");
         currentByte = *message;
         isStartBit = true;
       } else {
+        Serial.print(" Disabling timer2 interrupt ");
         transmitting = false;
         TIMSK2 &= ~(1 << OCIE2A); // Disable Timer2 interrupt
       }
@@ -84,17 +86,46 @@ void loop() {
   transmitMessage("Hello World!");
   while (transmitting) {
     // Wait for transmission to complete
+    checkStates();
   }
   Serial.println();
-  Serial.println("Message transmitted successfully");
   //delay(5000);
 }
 
 void transmitMessage(const char* msg) {
+  Serial.print(" Starting transmit message ");
   message = msg;
   currentByte = *message;
   bitCount = 0;
   isStartBit = true;
   transmitting = true;
   TIMSK2 |= (1 << OCIE2A); // Enable Timer2 interrupt (turn this into a function)
+}
+
+void checkStates() {
+  Serial.println("Message transmitted successfully");
+  Serial.print("F_CPU: ");
+  Serial.println(F_CPU);
+  Serial.print("OCR1A: ");
+  Serial.println(OCR1A);
+  Serial.print("OCR2A: ");
+  Serial.println(OCR2A);
+  Serial.print("TIMSK1: ");
+  Serial.println(TIMSK1);
+  Serial.print("TIMSK2: ");
+  Serial.println(TIMSK2);
+  Serial.print("TIMSK1: ");
+  Serial.println(TIMSK2);
+  Serial.print("Transmitting: ");
+  Serial.println(transmitting);
+  Serial.print("Current Byte: ");
+  Serial.println(currentByte);
+  Serial.print("Bit Count: ");
+  Serial.println(bitCount);
+  Serial.print("Message: ");
+  Serial.println(*message);
+  Serial.print("Bit Count: ");
+  Serial.println(bitCount);
+  Serial.print("Start Bit: ");
+  Serial.println(isStartBit);
 }
