@@ -47,22 +47,22 @@ ISR(TIMER2_COMPA_vect) {
   
   if (isStartBit) {
     // Transmit start bit (logical 0)
-    OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency (make this a function)
+    setTimer1SpaceFreq();
     isStartBit = false;
   }else if (bitCount < 8) {
     // Transmit data bits (LSB first)
     if (currentByte & (1 << bitCount)) {
-      OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency (make this a function)
+      setTimer1MarkFreq();
       Serial.print("1");
     } else {
-      OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency (make this a function)
+      setTimer1SpaceFreq();
       Serial.print("0");
     }
     bitCount++;
   } else {
     Serial.print(" ");
     // Transmit stop bit (logical 1)
-    OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
+    setTimer1MarkFreq();
     bitCount = 0;
     message++;
     if (*message) {
@@ -88,7 +88,15 @@ void timer1MarkSpace() {
   TCCR1A = 0; // Clear Timer1 control register A
   TCCR1B = 0; // Clear Timer1 control register B
   TCCR1B |= (1 << WGM12); // Set CTC mode
-  TCCR1B |= (1 << CS11); // Set prescaler to 8
+  TCCR1B |= ~(1 << CS10) | (1 << CS11) | ~(1 << CS12); // Set prescaler to 8
+}
+
+void setTimer1MarkFreq() {
+  OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1;
+}
+
+void setTimer1SpaceFreq() {
+  OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1;
 }
 
 void timer2BitTiming() {
