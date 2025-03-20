@@ -53,14 +53,14 @@ ISR(TIMER2_COMPA_vect) {
     // Transmit data bits (LSB first)
     if (currentByte & (1 << bitCount)) {
       setTimer1MarkFreq();
-      Serial.print("1");
+      //Serial.print("1");
     } else {
       setTimer1SpaceFreq();
-      Serial.print("0");
+      //Serial.print("0");
     }
     bitCount++;
   } else {
-    Serial.print(" ");
+    //Serial.print(" ");
     // Transmit stop bit (logical 1)
     setTimer1MarkFreq();
     bitCount = 0;
@@ -79,9 +79,8 @@ void loop() {
   while (transmitting) {
     // Wait for transmission to complete
   }
-  Serial.println();
-  Serial.println("Message transmitted successfully");
-  delay(5000);
+  checkStates();
+  delay(1000);
 }
 
 void timer1MarkSpace() {
@@ -92,18 +91,18 @@ void timer1MarkSpace() {
 }
 
 void setTimer1MarkFreq() {
-  OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1;
+  OCR1A = (unsigned long long)(F_CPU / (2 * 8 * MARK_FREQ)) - 1;
 }
 
 void setTimer1SpaceFreq() {
-  OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1;
+  OCR1A = (unsigned long long)(F_CPU / (2 * 8 * SPACE_FREQ)) - 1;
 }
 
 void timer2BitTiming() {
   TCCR2A = 0; // Clear Timer2 control register A
   TCCR2B = 0; // Clear Timer2 control register B
   TCCR2B |= (1 << CS22) | (1 << CS21) | (1 << CS20); // Set prescaler to 1024
-  OCR2A = (F_CPU / 1024 / (1000000 / BIT_DURATION)) - 1; // Set Timer2 compare value for bit duration
+  OCR2A = (unsigned long long)(F_CPU / 1024 / (1000000 / BIT_DURATION)) - 1; // Set Timer2 compare value for bit duration
 }
 
 void enableTimer1() {
@@ -134,4 +133,21 @@ void transmitMessage(const char* msg) {
 void endMessage() {
   transmitting = false;
   disableTimer2();
+}
+
+void checkStates() {
+  Serial.println("Message transmitted successfully");
+  Serial.print("F_CPU: ");
+  Serial.println(F_CPU);
+  Serial.print("OCR1A: ");
+  Serial.println(OCR1A);
+  Serial.print("OCR2A: ");
+  Serial.println(OCR2A);
+  Serial.print("TIMSK1: ");
+  Serial.println(TIMSK1);
+  Serial.print("TIMSK2: ");
+  Serial.println(TIMSK2);
+  Serial.print("TIMSK1: ");
+  Serial.println(TIMSK2);
+  Serial.println();
 }
