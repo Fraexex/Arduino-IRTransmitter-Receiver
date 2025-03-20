@@ -22,23 +22,17 @@ void setup() {
   Serial.begin(9600); // For verification purposes
   DDRB |= (1 << DDB1); // Set PB1 as output
 
-  // Configure Timer1 for mark/space frequency generation (consider just making this as a function)
-  TCCR1A = 0; // Clear Timer1 control register A
-  TCCR1B = 0; // Clear Timer1 control register B
-  TCCR1B |= (1 << WGM12); // Set CTC mode
-  TCCR1B |= (1 << CS11); // Set prescaler to 8
+  // Configure Timer1 for mark/space frequency generation
+  timer1MarkSpace();
 
   // Configure Timer2 for bit timing
-  TCCR2A = 0; // Clear Timer2 control register A
-  TCCR2B = 0; // Clear Timer2 control register B
-  TCCR2B |= (1 << CS22) | (1 << CS21) | (1 << CS20); // Set prescaler to 1024
-  OCR2A = (F_CPU / 1024 / (1000000 / BIT_DURATION)) - 1; // Set Timer2 compare value for bit duration
+  timer2BitTiming();
 
-  // Enable Timer1 and Timer2 compare interrupts
-  TIMSK1 |= (1 << OCIE1A);
-  TIMSK2 |= (1 << OCIE2A);
+  // Enable Timer1 and Timer2 compare interrupts 
+  enableTimer1();
+  enableTimer2();
 
-  // Set interrupt global enable flag bit (re-enable interrupts after being disabled).
+  // Set interrupt global enable flag bit (re-enable interrupts after being disabled)
   sei();
 }
 
@@ -75,8 +69,7 @@ ISR(TIMER2_COMPA_vect) {
       currentByte = *message;
       isStartBit = true;
     } else {
-      transmitting = false;
-      TIMSK2 &= ~(1 << OCIE2A); // Disable Timer2 interrupt
+      endMessage();
     }
   }
 }
@@ -91,10 +84,36 @@ void loop() {
   delay(5000);
 }
 
+void timer1MarkSpace() {
+  TCCR1A = 0; // Clear Timer1 control register A
+  TCCR1B = 0; // Clear Timer1 control register B
+  TCCR1B |= (1 << WGM12); // Set CTC mode
+  TCCR1B |= (1 << CS11); // Set prescaler to 8
+}
+
+void timer2BitTiming() {
+  TCCR2A = 0; // Clear Timer2 control register A
+  TCCR2B = 0; // Clear Timer2 control register B
+  TCCR2B |= (1 << CS22) | (1 << CS21) | (1 << CS20); // Set prescaler to 1024
+  OCR2A = (F_CPU / 1024 / (1000000 / BIT_DURATION)) - 1; // Set Timer2 compare value for bit duration
+}
+
+void enableTimer1() {
+  TIMSK1 |= (1 << OCIE1A);
+}
+
+void disableTimer1() {
+  TIMSK1 &= ~(1 << OCIE1A);
+}
+
 void enableTimer2() {
   TIMSK2 |= (1 << OCIE2A); // Enable Timer2 interrupt (consider making OCIE2A a parameter)
 }
- 
+
+void disableTimer2() {
+  TIMSK2 &= ~(1 << OCIE2A); // Disable Timer2 interrupt
+}
+
 void transmitMessage(const char* msg) {
   message = msg;
   currentByte = *message;
@@ -102,4 +121,9 @@ void transmitMessage(const char* msg) {
   isStartBit = true;
   transmitting = true;
   enableTimer2();
+}
+
+void endMessage() {
+  transmitting = false;
+  disableTimer2();
 }
