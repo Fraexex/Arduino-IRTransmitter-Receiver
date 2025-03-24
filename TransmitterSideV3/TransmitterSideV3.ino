@@ -1,80 +1,79 @@
-//@ -1,91 +1,99 @@
-/*
- * Put states in an object, since they change frequency.
- * Only would need to look at one place to see how states
- * are being mutated.
- * 
- * One object that deals with sending messages
- */
-
-#define IR_LED_PIN 9 // Digital Pin 9 corresponds to ATmega328p's PB1 pin
-#define MARK_FREQ 2295 // Frequency for logical 1 (mark)
-#define SPACE_FREQ 2125 // Frequency for logical 0 (space)
-#define BAUD_RATE 45.45 // Baud rate (bits per second)
-#define BIT_DURATION (1000000 / BAUD_RATE) // Bit duration in microseconds (22 ms)
+//@ -0,0 +1,96 @@
+#define IR_LED_PIN 9 // Digital Pin 9 corresponds to ATmega328p's PB1 pin, which has Timer1 functionality
+#define PULSE_DURATION 600  // Duration of a pulse in microseconds
+#define SPACE_DURATION 600  // Duration of a space in microseconds
 
 volatile bool transmitting = false;
 volatile uint8_t currentByte = 0;
 volatile uint8_t bitCount = 0;
 volatile const char *message = NULL;
-volatile bool isStartBit = true;
+volatile bool pulseActive = false;
+volatile unsigned long pulseEndTime = 0;
 
 void setup() {
   Serial.begin(9600); // For verification purposes
   DDRB |= (1 << DDB1); // Set PB1 as output
 
-  // Configure Timer1 for mark/space frequency generation (consider just making this as a function)
-  TCCR1A = 0; // Clear Timer1 control register A
-  TCCR1B = 0; // Clear Timer1 control register B
-  TCCR1B |= (1 << WGM12); // Set CTC mode
-  TCCR1B |= (1 << CS11); // Set prescaler to 8
+  // Configure Timer1 for carrier frequency generation
+  TCCR1A = 0;
+  TCCR1B = 0;
 
-  // Configure Timer2 for bit timing
-  TCCR2A = 0; // Clear Timer2 control register A
-  TCCR2B = 0; // Clear Timer2 control register B
-  TCCR2B |= (1 << CS22) | (1 << CS21) | (1 << CS20); // Set prescaler to 1024
-  OCR2A = (F_CPU / 1024 / (1000000 / BIT_DURATION)) - 1; // Set Timer2 compare value for bit duration
+  // Set desired frequency
+  int frequency = 2125;
+  int prescalar = 8;
+  int timerValue = (F_CPU / (2 * prescalar * frequency)) - 1;
 
-  // Enable Timer1 and Timer2 compare interrupts
+  // Set timer value
+  OCR1A = timerValue;
+
+  // Configure Timer1 in CTC mode (clears timer on compare)
+  TCCR1B |= (1 << WGM12);
+  TCCR1B |= (1 << CS11);
+
+  // Enable Timer1 compare interrupt
   TIMSK1 |= (1 << OCIE1A);
-  TIMSK2 |= (1 << OCIE2A);
+
+  // Configure Timer2 for pulse and space timing
+  TCCR2A = 0;
+  TCCR2B = 0;
+  TCCR2B |= (1 << CS21); // Set prescaler to 8
+  OCR2A = (F_CPU / 8 / 1000000) * PULSE_DURATION - 1; // Set Timer2 compare value for pulse duration
 
   // Set interrupt global enable flag bit (re-enable interrupts after being disabled).
   sei();
 }
 
 ISR(TIMER1_COMPA_vect) {
-  PORTB ^= (1 << PORTB1); // Toggle PB1 to generate mark/space frequency
+  PORTB ^= (1 << PORTB1); // Toggle PB1 to generate carrier frequency
 }
 
 ISR(TIMER2_COMPA_vect) {
   if (transmitting) {
-    if (isStartBit) {
-      // Transmit start bit (logical 0)
-      OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency
-      isStartBit = false;
-    } else if (bitCount < 8) {
-      // Transmit data bits (LSB first)
-      if (currentByte & (1 << bitCount)) {
-        OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
-        Serial.print("1");
-      } else {
-        OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency
-        Serial.print("0");
-      }
-      bitCount++;
+    if (pulseActive) {
+      // End of pulse
+      PORTB &= ~(1 << PORTB1); // Set PB1 LOW
+      pulseActive = false;
+      OCR2A = (F_CPU / 8 / 1000000) * SPACE_DURATION - 1; // Set Timer2 compare value for space duration
     } else {
-      Serial.print(" ");
-      // Transmit stop bit (logical 1)
-      OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
-      bitCount = 0;
-      message++;
-      if (*message) {
-        currentByte = *message;
-        isStartBit = true;
+      // End of space
+      if (bitCount < 8) {
+        if (currentByte & (1 << (7 - bitCount))) {
+          // Start pulse
+          PORTB |= (1 << PORTB1); // Set PB1 HIGH
+          pulseActive = true;
+          OCR2A = (F_CPU / 8 / 1000000) * PULSE_DURATION - 1; // Set Timer2 compare value for pulse duration
+        }
+        bitCount++;
       } else {
-        transmitting = false;
-        TIMSK2 &= ~(1 << OCIE2A); // Disable Timer2 interrupt
+        // Space between characters
+        bitCount = 0;
+        message++;
+        if (*message) {
+          currentByte = *message;
+        } else {
+          transmitting = false;
+          TIMSK2 &= ~(1 << OCIE2A); // Disable Timer2 interrupt
+        }
       }
     }
   }
@@ -85,7 +84,6 @@ void loop() {
   while (transmitting) {
     // Wait for transmission to complete
   }
-  Serial.println();
   Serial.println("Message transmitted successfully");
   //delay(5000);
 }
@@ -94,7 +92,6 @@ void transmitMessage(const char* msg) {
   message = msg;
   currentByte = *message;
   bitCount = 0;
-  isStartBit = true;
   transmitting = true;
-  TIMSK2 |= (1 << OCIE2A); // Enable Timer2 interrupt (turn this into a function)
+  TIMSK2 |= (1 << OCIE2A); // Enable Timer2 interrupt
 }

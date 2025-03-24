@@ -49,32 +49,34 @@ ISR(TIMER1_COMPA_vect) {
 
 ISR(TIMER2_COMPA_vect) {
   if (transmitting) {
+    //Serial.println(isStartBit);
     if (isStartBit) {
       // Transmit start bit (logical 0)
       OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency
+      Serial.println(OCR1A);
       isStartBit = false;
     } else if (bitCount < 8) {
       // Transmit data bits (LSB first)
       if (currentByte & (1 << bitCount)) {
         OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
-        Serial.print("1");
+        //Serial.print("1");
       } else {
         OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency
-        Serial.print("0");
+        //Serial.print("0");
       }
       bitCount++;
     } else {
-      Serial.print(" ");
+      //Serial.print(" ");
       // Transmit stop bit (logical 1)
       OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
       bitCount = 0;
       message++;
       if (*message) {
-        Serial.print(" Moving to next character ");
+        //Serial.print(" Moving to next character ");
         currentByte = *message;
         isStartBit = true;
       } else {
-        Serial.print(" Disabling timer2 interrupt ");
+        //Serial.print(" Disabling timer2 interrupt ");
         transmitting = false;
         TIMSK2 &= ~(1 << OCIE2A); // Disable Timer2 interrupt
       }
@@ -86,14 +88,16 @@ void loop() {
   transmitMessage("Hello World!");
   while (transmitting) {
     // Wait for transmission to complete
-    checkStates();
+    //checkStates();
   }
   Serial.println();
   //delay(5000);
 }
 
+
+
 void transmitMessage(const char* msg) {
-  Serial.print(" Starting transmit message ");
+  Serial.println(" Starting transmit message ");
   message = msg;
   currentByte = *message;
   bitCount = 0;
@@ -106,26 +110,32 @@ void checkStates() {
   Serial.println("Message transmitted successfully");
   Serial.print("F_CPU: ");
   Serial.println(F_CPU);
+  Serial.println();
   Serial.print("OCR1A: ");
   Serial.println(OCR1A);
+  Serial.println();
   Serial.print("OCR2A: ");
   Serial.println(OCR2A);
+  Serial.println();
   Serial.print("TIMSK1: ");
   Serial.println(TIMSK1);
+  Serial.println();
   Serial.print("TIMSK2: ");
   Serial.println(TIMSK2);
-  Serial.print("TIMSK1: ");
-  Serial.println(TIMSK2);
+  Serial.println();
   Serial.print("Transmitting: ");
   Serial.println(transmitting);
+  Serial.println();
   Serial.print("Current Byte: ");
   Serial.println(currentByte);
+  Serial.println();
   Serial.print("Bit Count: ");
   Serial.println(bitCount);
+  Serial.println();
   Serial.print("Message: ");
   Serial.println(*message);
-  Serial.print("Bit Count: ");
-  Serial.println(bitCount);
+  Serial.println();
   Serial.print("Start Bit: ");
   Serial.println(isStartBit);
+  Serial.println();
 }
