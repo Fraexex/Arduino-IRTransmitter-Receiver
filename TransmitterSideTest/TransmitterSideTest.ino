@@ -8,8 +8,8 @@
  */
 
 #define IR_LED_PIN 9 // Digital Pin 9 corresponds to ATmega328p's PB1 pin
-#define MARK_FREQ 0.5 // Frequency for logical 1 (mark)
-#define SPACE_FREQ 0.4 // Frequency for logical 0 (space)
+#define MARK_FREQ 2295 // Frequency for logical 1 (mark)
+#define SPACE_FREQ 2125 // Frequency for logical 0 (space)
 #define BAUD_RATE 45.45 // Baud rate (bits per second)
 #define BIT_DURATION (1000000 / BAUD_RATE) // Bit duration in microseconds (22 ms)
 
@@ -33,7 +33,7 @@ void setup() {
   TCCR2A = 0; // Clear Timer2 control register A
   TCCR2B = 0; // Clear Timer2 control register B
   TCCR2B |= (1 << CS22) | (1 << CS21) | (1 << CS20); // Set prescaler to 1024
-  OCR2A = (F_CPU / 1024 / (1000000 / BIT_DURATION)) - 1; // Set Timer2 compare value for bit duration
+  OCR2A = -1; //(F_CPU / 1024 / (1000000 / BIT_DURATION)) - 1; // Set Timer2 compare value for bit duration
 
   // Enable Timer1 and Timer2 compare interrupts
   TIMSK1 |= (1 << OCIE1A);
@@ -52,23 +52,25 @@ ISR(TIMER2_COMPA_vect) {
     //Serial.println(isStartBit);
     if (isStartBit) {
       // Transmit start bit (logical 0)
-      OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency
-      Serial.println(OCR1A);
+      OCR1A = 471; //(F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency
+      //Serial.println(OCR1A);
       isStartBit = false;
     } else if (bitCount < 8) {
       // Transmit data bits (LSB first)
       if (currentByte & (1 << bitCount)) {
-        OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
-        //Serial.print("1");
+        OCR1A = 436; // (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
+        //Serial.println(OCR1A);
+        Serial.print("1");
       } else {
-        OCR1A = (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency
-        //Serial.print("0");
+        OCR1A = 471; // (F_CPU / (2 * 8 * SPACE_FREQ)) - 1; // Set Timer1 for space frequency
+        //Serial.println(OCR1A);
+        Serial.print("0");
       }
       bitCount++;
     } else {
-      //Serial.print(" ");
+      Serial.print(" ");
       // Transmit stop bit (logical 1)
-      OCR1A = (F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
+      OCR1A = 436; //(F_CPU / (2 * 8 * MARK_FREQ)) - 1; // Set Timer1 for mark frequency
       bitCount = 0;
       message++;
       if (*message) {
