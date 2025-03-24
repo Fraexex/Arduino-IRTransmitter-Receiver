@@ -91,18 +91,18 @@ void timer1MarkSpace() {
 }
 
 void setTimer1MarkFreq() {
-  OCR1A = (unsigned long long)(F_CPU / (2 * 8 * MARK_FREQ)) - 1;
+  OCR1A = 436; //(F_CPU / (2 * 8 * MARK_FREQ)) - 1;
 }
 
 void setTimer1SpaceFreq() {
-  OCR1A = (unsigned long long)(F_CPU / (2 * 8 * SPACE_FREQ)) - 1;
+  OCR1A = 471; //(F_CPU / (2 * 8 * SPACE_FREQ)) - 1;
 }
 
 void timer2BitTiming() {
   TCCR2A = 0; // Clear Timer2 control register A
   TCCR2B = 0; // Clear Timer2 control register B
   TCCR2B |= (1 << CS22) | (1 << CS21) | (1 << CS20); // Set prescaler to 1024
-  OCR2A = (unsigned long long)2 * 1024 * (1 + / (1000000 / BIT_DURATION)) - 1; // Set Timer2 compare value for bit duration
+  OCR2A = -1; //(unsigned long long)2 * 1024 * (1 + / (1000000 / BIT_DURATION)) - 1; // Set Timer2 compare value for bit duration
 }
 
 void enableTimer1() {

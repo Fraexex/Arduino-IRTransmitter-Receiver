@@ -50,6 +50,8 @@ void setup() {
 
 void loop() {
   // Check if new data is available
+  handleIRSignal(receiver);
+  Serial.println(receiver.receiving);
   if (receiver.newDataAvailable) {
     processReceivedData(receiver);
     receiver.newDataAvailable = false; // Reset the flag
@@ -74,14 +76,14 @@ void initializeTimer2() {
   TCCR2A = 0; // Clear Timer2 control register A
   TCCR2B = 0; // Clear Timer2 control register B
   TCCR2B |= (1 << CS22) | (1 << CS21) | (1 << CS20); // Set prescaler to 1024
-  OCR2A = (F_CPU / 1024 / (1000000 / BIT_DURATION)) - 1; // Set Timer2 compare value for bit duration
+  OCR2A = -1; // (F_CPU / 1024 / (1000000 / BIT_DURATION)) - 1; // Set Timer2 compare value for bit duration
   TIMSK2 |= (1 << OCIE2A); // Enable Timer2 compare interrupt
 }
 
 // Function to handle IR signal detection
 void handleIRSignal(ReceiverState &state) {
-  unsigned long currentTime = micros();
-  unsigned long pulseDuration = currentTime - state.lastPulseTime;
+  unsigned long long currentTime = micros();
+  unsigned long long pulseDuration = currentTime - state.lastPulseTime;
 
   if (pulseDuration > 1000) { // Ignore noise (adjust threshold as needed)
     if (pulseDuration >= (1000000 / SPACE_FREQ) * 0.9 && pulseDuration <= (1000000 / SPACE_FREQ) * 1.1) {
