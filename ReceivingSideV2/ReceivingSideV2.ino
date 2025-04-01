@@ -42,7 +42,7 @@ void setup() {
   initializeTimer2();
 
   // Attach interrupt for IR receiver input
-  attachInterrupt(digitalPinToInterrupt(IR_RECEIVER_PIN), []() { handleIRSignal(receiver); }, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(IR_RECEIVER_PIN), []() { handleIRSignal(receiver); }, CHANGE); // Look into LM311
 
   // Set interrupt global enable flag bit (re-enable interrupts after being disabled).
   sei();
@@ -51,7 +51,6 @@ void setup() {
 void loop() {
   // Check if new data is available
   handleIRSignal(receiver);
-  Serial.println(receiver.receiving);
   if (receiver.newDataAvailable) {
     processReceivedData(receiver);
     receiver.newDataAvailable = false; // Reset the flag
@@ -88,10 +87,11 @@ void handleIRSignal(ReceiverState &state) {
   if (pulseDuration > 1000) { // Ignore noise (adjust threshold as needed)
     if (pulseDuration >= (1000000 / SPACE_FREQ) * 0.9 && pulseDuration <= (1000000 / SPACE_FREQ) * 1.1) {
       // Detected space frequency (logical 0)
-      if (state.isStartBit) {
+      if (state.isStartBit) { // Change later to ensure this is not being assumed as the first bit 
         // Start bit detected
         state.isStartBit = false;
         state.receiving = true;
+        Serial.println(receiver.receiving);
         state.currentByte = 0;
         state.bitCount = 0;
       } else if (state.receiving && state.bitCount < 8) {
@@ -108,6 +108,7 @@ void handleIRSignal(ReceiverState &state) {
       } else if (state.receiving && state.bitCount == 8) {
         // Stop bit detected
         state.receiving = false;
+        Serial.println(receiver.receiving);
         state.newDataAvailable = true; // Set flag to indicate new data is available
       }
     }
