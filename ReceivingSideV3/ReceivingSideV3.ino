@@ -10,6 +10,8 @@ volatile uint8_t rxByte = 0;
 volatile uint8_t bitCount = 0;
 volatile bool receiving = false;
 volatile unsigned long lastEdge = 0;
+volatile uint8_t receivedByte = 0;
+volatile bool newDataAvailable = false;
 
 void setup() {
   Serial.begin(9600);
@@ -18,12 +20,16 @@ void setup() {
 }
 
 void loop() {
-  // Main logic here (e.g., process received bytes)
+  // Process received bytes)
+  if (Serial.availableForWrite()) {
+    // (Data is printed in the ISR via Serial.write)
+  }
 }
 
 void handleInterrupt() {
   unsigned long now = micros(); // Current time in microseconds (resets after ~70 minutes)
   unsigned long pulseWidth = now - lastEdge; // Duration between two consecutive edges (high→low or low→high)
+  Serial.print("Pulse width (µs): ");
   Serial.println(pulseWidth);
   lastEdge = now; // Timestamp (in microseconds) of the previous signal change (rising or falling edge)
 
@@ -35,12 +41,10 @@ void handleInterrupt() {
   bool isSpace = (pulseWidth >= SPACE_MIN_US && pulseWidth <= SPACE_MAX_US);
 
   // Protocol state machine
-  if (!receiving) {
-    if (isSpace) {  // Start bit detected
-      receiving = true;
-      rxByte = 0;
-      bitCount = 0;
-    }
+  if (!receiving && isSpace) {
+    receiving = true;
+    rxByte = 0;
+    bitCount = 0;
   } else {
     if (bitCount < 8) {  // Data bits
       if (isMark) rxByte |= (1 << bitCount);
@@ -50,4 +54,19 @@ void handleInterrupt() {
       receiving = false;
     }
   }
+}
+
+void debug() {
+  Serial.print("rxByte: ");
+  Serial.println(rxByte);
+  Serial.print("Bit count: ");
+  Serial.println(bitCount);
+  Serial.print("Receiving bool: ");
+  Serial.println(receiving);
+  Serial.print("Last pulse edge: ");
+  Serial.println(lastEdge);
+  Serial.print("Received byte: ");
+  Serial.println(receivedByte);
+  Serial.print("New data bool: ");
+  Serial.println(newDataAvailable);
 }
