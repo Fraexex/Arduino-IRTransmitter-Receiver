@@ -40,18 +40,24 @@ void handleInterrupt() {
   bool isMark = (pulseWidth >= MARK_MIN_US && pulseWidth <= MARK_MAX_US);
   bool isSpace = (pulseWidth >= SPACE_MIN_US && pulseWidth <= SPACE_MAX_US);
 
+  debug();
+  
   // Protocol state machine
-  if (!receiving && isSpace) {
+  if (!receiving && isSpace) {  // Start bit
     receiving = true;
     rxByte = 0;
     bitCount = 0;
-  } else {
+    debug();
+  } 
+  else if (receiving) {
     if (bitCount < 8) {  // Data bits
-      if (isMark) rxByte |= (1 << bitCount);
+      if (isMark) rxByte |= (1 << (7 - bitCount));
+      debug();
       bitCount++;
     } else {  // Stop bit
       if (isMark) Serial.write(rxByte);  // Valid byte received
       receiving = false;
+      debug();
     }
   }
 }
