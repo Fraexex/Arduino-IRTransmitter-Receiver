@@ -1,4 +1,4 @@
-#define IR_PIN 2  // Digital pin (INT0) connected to diode OR output
+#define IR_PIN 2  // Digital pin (INT0) connected to LM311's diode OR output
 
 // Timing thresholds (adjust based on actual measurements)
 #define MARK_MIN_US   400   // ~436µs expected
@@ -6,12 +6,11 @@
 #define SPACE_MIN_US  451
 #define SPACE_MAX_US  500   // ~471µs expected
 
-volatile uint8_t rxByte = 0;
-volatile uint8_t bitCount = 0;
-volatile bool receiving = false;
-volatile unsigned long lastEdge = 0;
-volatile uint8_t receivedByte = 0;
-volatile bool newDataAvailable = false;
+volatile uint8_t rxByte = 0;             // Stores received byte
+volatile uint8_t bitCount = 0;           // Tracks bit position
+volatile bool receiving = false;         // Reception in progress
+volatile unsigned long lastEdge = 0;     // Timestampt for pulse width 
+volatile bool newDataReady = false;      // Flag for completed byte
 
 void setup() {
   Serial.begin(9600);
@@ -54,8 +53,9 @@ void handleInterrupt() {
       if (isMark) rxByte |= (1 << (7 - bitCount));
       debug();
       bitCount++;
-    } else {  // Stop bit
-      if (isMark) Serial.write(rxByte);  // Valid byte received
+    }
+    else if (isMark) {  // Stop bit
+      Serial.write(rxByte);  // Valid byte received
       receiving = false;
       debug();
     }
