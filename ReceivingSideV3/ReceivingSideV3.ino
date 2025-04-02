@@ -75,5 +75,5 @@ void debug() {
   Serial.print("Last pulse edge: ");
   Serial.println(lastEdge);
   Serial.print("New data bool: ");
-  Serial.println(newDataAvailable);
+  Serial.println(newDataReady);
 }
