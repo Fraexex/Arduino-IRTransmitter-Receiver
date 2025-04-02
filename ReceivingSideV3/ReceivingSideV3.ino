@@ -2,88 +2,131 @@
 
 // Timing thresholds (adjust based on actual measurements)
 #define MARK_MIN_US   400   // ~436µs expected
-#define MARK_MAX_US   450
-#define SPACE_MIN_US  451
+#define MARK_MAX_US   450   // ~436µs expected
+#define SPACE_MIN_US  451   // ~471µs expected
 #define SPACE_MAX_US  500   // ~471µs expected
+#define NOISE_THRESHOLD 100 // Ignore pulses shorter than this
 
 // Buffer to prevent data loss, due to slow loop (adjust based on data rate)
 #define BUF_SIZE 32
 
-// Buffer variables
-volatile uint8_t buffer[BUF_SIZE];
-volatile uint8_t head = 0;
-volatile uint8_t tail = 0;
-volatile bool bufferFull = false;
+// Receiver State
+typedef struct {
+  // Buffer variables
+  volatile uint8_t buffer[BUF_SIZE];
+  volatile uint8_t head;
+  volatile uint8_t tail;
+  volatile bool bufferFull;
+  
+  // Interrupt service routine variables
+  volatile uint8_t rxByte;             // Stores received byte
+  volatile uint8_t bitCount;           // Tracks bit position
+  volatile bool receiving;             // Reception in progress
+  volatile unsigned long lastEdge;     // Timestampt for pulse width 
+} ReceiverState;
 
-// Interrupt service routine variables
-volatile uint8_t rxByte = 0;             // Stores received byte
-volatile uint8_t bitCount = 0;           // Tracks bit position
-volatile bool receiving = false;         // Reception in progress
-volatile unsigned long lastEdge = 0;     // Timestampt for pulse width 
+volatile ReceiverState receiver;
 
 void setup() {
+  receiver.head = 0;
+  receiver.tail = 0;
+  receiver.bufferFull = false;
+  receiver.rxByte = 0;
+  receiver.bitCount = 0;
+  receiver.receiving = false;
+  receiver.lastEdge = 0;
+  
   Serial.begin(9600);
   pinMode(IR_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(IR_PIN), handleInterrupt, CHANGE);
 }
 
 void loop() {
-  // Process received bytes)
-  if (head != tail || bufferFull) {
-    Serial.print((char)buffer[tail]);
-    tail = (tail + 1) % BUF_SIZE;
-    bufferFull = false;
+  processReceivedData();
+}
+
+void processReceivedData() {
+  while (dataAvailable()) {
+    Serial.print((char)readByte());
   }
 }
 
+bool dataAvailable() {
+  return (receiver.head != receiver.tail) || receiver.bufferFull;
+}
+
+uint8_t readByte() {
+  uint8_t currentByte = receiver.buffer[receiver.tail];
+  receiver.tail = (receiver.tail + 1) % BUF_SIZE;
+  receiver.bufferFull = false;
+  return currentByte;
+}
+
 void handleInterrupt() {
-  unsigned long now = micros(); // Current time in microseconds (resets after ~70 minutes)
-  unsigned long pulseWidth = now - lastEdge; // Duration between two consecutive edges (high→low or low→high)
+  const unsigned long now = micros(); // Current time in microseconds (resets after ~70 minutes)
+  const unsigned long pulseWidth = now - receiver.lastEdge; // Duration between two consecutive edges (high→low or low→high)
   // Serial.print("Pulse width (µs): ");
   // Serial.println(pulseWidth);
-  lastEdge = now; // Timestamp (in microseconds) of the previous signal change (rising or falling edge)
+  receiver.lastEdge = now; // Timestamp (in microseconds) of the previous signal change (rising or falling edge)
 
   // Noise filter (ignore glitches <100µs)
   if (pulseWidth < 100) return;
 
   // Classify pulse
-  bool isMark = (pulseWidth >= MARK_MIN_US && pulseWidth <= MARK_MAX_US);
-  bool isSpace = (pulseWidth >= SPACE_MIN_US && pulseWidth <= SPACE_MAX_US);
+  const bool isMarkFreq = inRange(pulseWidth, MARK_MIN_US, MARK_MAX_US);
+  const bool isSpaceFreq = inRange(pulseWidth, SPACE_MIN_US, SPACE_MAX_US);
 
   debug();
   
   // Protocol state machine
-  if (!receiving && isSpace) {  // Start bit
-    receiving = true;
-    rxByte = 0;
-    bitCount = 0;
-    debug();
+  if (!receiver.receiving && isSpaceFreq) {  // Start bit
+    startReception();
   } 
-  else if (receiving) {
-    if (bitCount < 8) {  // Data bits
-      if (isMark) rxByte |= (1 << (7 - bitCount));
-      debug();
-      bitCount++;
+  else if (receiver.receiving) {
+    processBit(isMarkFreq);
+  }
+}
+
+// ============ HELPER FUNCTIONS ============
+
+bool inRange(unsigned long value, unsigned long minimum, unsigned long maximum) {
+  return (value >= minimum && value <= maximum);
+}
+
+void startReception() {
+  receiver.receiving = true;
+  receiver.rxByte = 0;
+  receiver.bitCount = 0;
+}
+
+void processBit(bool isMarkFreq) {
+  if (receiver.bitCount < 8) {
+    if (isMarkFreq) {
+      receiver.rxByte |= (1 << (7 - receiver.bitCount)); // LSB->MSB
     }
-    else if (isMark) {  // Stop bit
-      if (!bufferFull) {
-        buffer[head] = rxByte;
-        head = (head + 1) % BUF_SIZE;
-        bufferFull = (head == tail);
-      }
-      receiving = false;
-      debug();
-    }
+    receiver.bitCount++;
+  }
+  else if (isMarkFreq) {
+    storeByte();
+    receiver.receiving = false;
+  }
+}
+
+void storeByte() {
+  if (!receiver.bufferFull) {
+    receiver.buffer[receiver.head] = receiver.rxByte;
+    receiver.head = (receiver.head + 1) % BUF_SIZE;
+    receiver.bufferFull = (receiver.head == receiver.tail);
   }
 }
 
 void debug() {
   Serial.print("rxByte: ");
-  Serial.println(rxByte);
+  Serial.println(receiver.rxByte);
   Serial.print("Bit count: ");
-  Serial.println(bitCount);
+  Serial.println(receiver.bitCount);
   Serial.print("Receiving bool: ");
-  Serial.println(receiving);
+  Serial.println(receiver.receiving);
   Serial.print("Last pulse edge: ");
-  Serial.println(lastEdge);
+  Serial.println(receiver.lastEdge);
 }
