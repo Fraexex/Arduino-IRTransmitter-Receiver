@@ -1,3 +1,4 @@
+//@ -0,0 +1,96 @@
 #define IR_LED_PIN 9 // Digital Pin 9 corresponds to ATmega328p's PB1 pin, which has Timer1 functionality
 #define PULSE_DURATION 600  // Duration of a pulse in microseconds
 #define SPACE_DURATION 600  // Duration of a space in microseconds
@@ -84,7 +85,7 @@ void loop() {
     // Wait for transmission to complete
   }
   Serial.println("Message transmitted successfully");
-  delay(5000);
+  //delay(5000);
 }
 
 void transmitMessage(const char* msg) {
