@@ -20,8 +20,10 @@ void setup() {
 
 void loop() {
   // Process received bytes)
-  if (Serial.availableForWrite()) {
-    // (Data is printed in the ISR via Serial.write)
+  if (newDataReady) {
+    Serial.print("New data: ");
+    Serial.println((char)rxByte);
+    newDataReady = false;
   }
 }
 
@@ -71,8 +73,6 @@ void debug() {
   Serial.println(receiving);
   Serial.print("Last pulse edge: ");
   Serial.println(lastEdge);
-  Serial.print("Received byte: ");
-  Serial.println(receivedByte);
   Serial.print("New data bool: ");
   Serial.println(newDataAvailable);
 }
