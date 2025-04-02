@@ -58,6 +58,7 @@ void handleInterrupt() {
     }
     else if (isMark) {  // Stop bit
       Serial.write(rxByte);  // Valid byte received
+      newDataReady = true;
       receiving = false;
       debug();
     }
