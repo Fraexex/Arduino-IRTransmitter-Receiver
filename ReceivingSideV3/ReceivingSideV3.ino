@@ -6,11 +6,20 @@
 #define SPACE_MIN_US  451
 #define SPACE_MAX_US  500   // ~471µs expected
 
+// Buffer to prevent data loss, due to slow loop (adjust based on data rate)
+#define BUF_SIZE 32
+
+// Buffer variables
+volatile uint8_t buffer[BUF_SIZE];
+volatile uint8_t head = 0;
+volatile uint8_t tail = 0;
+volatile bool bufferFull = false;
+
+// Interrupt service routine variables
 volatile uint8_t rxByte = 0;             // Stores received byte
 volatile uint8_t bitCount = 0;           // Tracks bit position
 volatile bool receiving = false;         // Reception in progress
 volatile unsigned long lastEdge = 0;     // Timestampt for pulse width 
-volatile bool newDataReady = false;      // Flag for completed byte
 
 void setup() {
   Serial.begin(9600);
@@ -20,18 +29,18 @@ void setup() {
 
 void loop() {
   // Process received bytes)
-  if (newDataReady) {
-    Serial.print("New data: ");
-    Serial.println((char)rxByte);
-    newDataReady = false;
+  if (head != tail || bufferFull) {
+    Serial.print((char)buffer[tail]);
+    tail = (tail + 1) % BUF_SIZE;
+    bufferFull = false;
   }
 }
 
 void handleInterrupt() {
   unsigned long now = micros(); // Current time in microseconds (resets after ~70 minutes)
   unsigned long pulseWidth = now - lastEdge; // Duration between two consecutive edges (high→low or low→high)
-  Serial.print("Pulse width (µs): ");
-  Serial.println(pulseWidth);
+  // Serial.print("Pulse width (µs): ");
+  // Serial.println(pulseWidth);
   lastEdge = now; // Timestamp (in microseconds) of the previous signal change (rising or falling edge)
 
   // Noise filter (ignore glitches <100µs)
@@ -57,8 +66,11 @@ void handleInterrupt() {
       bitCount++;
     }
     else if (isMark) {  // Stop bit
-      Serial.write(rxByte);  // Valid byte received
-      newDataReady = true;
+      if (!bufferFull) {
+        buffer[head] = rxByte;
+        head = (head + 1) % BUF_SIZE;
+        bufferFull = (head == tail);
+      }
       receiving = false;
       debug();
     }
@@ -74,6 +86,4 @@ void debug() {
   Serial.println(receiving);
   Serial.print("Last pulse edge: ");
   Serial.println(lastEdge);
-  Serial.print("New data bool: ");
-  Serial.println(newDataReady);
 }
