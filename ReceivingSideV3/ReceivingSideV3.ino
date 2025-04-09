@@ -60,12 +60,7 @@ void configAnalogComparator() {
   ACSR |= (1 << ACIS1) | (1 << ACIS0); // Set interrupt on both edges
   ACSR |= (1 << ACBG);  // Use internal bandgap reference (1.1V)
 
-  pinMode(ANALOG_COMP_PIN, INPUT);
-  pinMode(REF_PIN, OUTPUT);
-  analogWrite(REF_PIN, 51); // 0.4(51/255 * 5) V
-
-  ACSR &= ~(1 << ACD); // Turn on comparator
-  ACSR |= (1 << ACBG); // Set bandgap reference
+  DIDR1 |= (1 << AIN0D) | (1 << AIN1D); // Disable digital input buffers
 }
 
 void processReceivedData() {
