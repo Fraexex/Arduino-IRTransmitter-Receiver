@@ -1,4 +1,7 @@
+// Pins
 #define IR_PIN 2  // Digital pin (INT0) connected to LM311's diode OR output
+#define ANALOG_COMP_PIN 6  // AIN0 (analog comparator positive input)
+#define REF_PIN 7  // AIN1 (analog comparator negative input) 0.4V reference
 
 // Timing thresholds (adjust based on actual measurements)
 #define MARK_MIN_US   400   // ~436µs expected
@@ -35,18 +38,34 @@ void setup() {
   receiver.bitCount = 0;
   receiver.receiving = false;
   receiver.lastEdge = 0;
+
+  configAnalogComparator();
   
   Serial.begin(9600);
   pinMode(IR_PIN, INPUT);
-  digitalWrite(IR_PIN, LOW);
   attachInterrupt(digitalPinToInterrupt(IR_PIN), handleInterrupt, CHANGE);
+  digitalWrite(IR_PIN, LOW);
 }
 
 void loop() {
   processReceivedData();
-  int state = digitalRead(IR_PIN);
+  int state = readIRPin(); // digitalRead(IR_PIN);
   Serial.println(state);
   // debug();
+}
+
+void configAnalogComparator() {
+  // Configure analog comparator for Schmitt trigger mode
+  ACSR = 0; // Clear the register
+  ACSR |= (1 << ACIS1) | (1 << ACIS0); // Set interrupt on both edges
+  ACSR |= (1 << ACBG);  // Use internal bandgap reference (1.1V)
+
+  pinMode(ANALOG_COMP_PIN, INPUT);
+  pinMode(REF_PIN, OUTPUT);
+  analogWrite(REF_PIN, 51); // 0.4(51/255 * 5) V
+
+  ACSR &= ~(1 << ACD); // Turn on comparator
+  ACSR |= (1 << ACBG); // Set bandgap reference
 }
 
 void processReceivedData() {
@@ -64,6 +83,10 @@ uint8_t readByte() {
   receiver.tail = (receiver.tail + 1) % BUF_SIZE;
   receiver.bufferFull = false;
   return currentByte;
+}
+
+int readIRPin() {
+  return (ACSR & (1 << ACO)) ? HIGH : LOW;
 }
 
 void handleInterrupt() {
