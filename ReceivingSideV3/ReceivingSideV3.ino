@@ -22,7 +22,7 @@ typedef struct {
   volatile uint8_t rxByte;             // Stores received byte
   volatile uint8_t bitCount;           // Tracks bit position
   volatile bool receiving;             // Reception in progress
-  volatile unsigned long lastEdge;     // Timestampt for pulse width 
+  volatile unsigned long lastEdge;     // Timestamp for pulse width 
 } ReceiverState;
 
 volatile ReceiverState receiver;
@@ -38,11 +38,15 @@ void setup() {
   
   Serial.begin(9600);
   pinMode(IR_PIN, INPUT);
+  digitalWrite(IR_PIN, LOW);
   attachInterrupt(digitalPinToInterrupt(IR_PIN), handleInterrupt, CHANGE);
 }
 
 void loop() {
   processReceivedData();
+  int state = digitalRead(IR_PIN);
+  Serial.println(state);
+  // debug();
 }
 
 void processReceivedData() {
