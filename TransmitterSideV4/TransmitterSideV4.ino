@@ -91,7 +91,7 @@ void timer1MarkSpace() {
 }
 
 void setTimer1MarkFreq() {
-  OCR1A = 436; //(F_CPU / (2 * 8 * MARK_FREQ)) - 1;
+  OCR1A = 434; //(F_CPU / (2 * 8 * MARK_FREQ)) - 1;
 }
 
 void setTimer1SpaceFreq() {
