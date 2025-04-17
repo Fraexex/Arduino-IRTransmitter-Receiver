@@ -107,7 +107,7 @@ void printVoltage() {
 void loop() {
   // Optional debug output
   static uint32_t lastPrint = 0;
-  if (millis() - lastPrint > 1000) {
+  if (millis() - lastPrint > 10) {
   Serial.print("High: "); Serial.print(highPeriod * 0.0625);
   Serial.print("µs Low: "); Serial.print(lowPeriod * 0.0625);
   Serial.println("µs");
