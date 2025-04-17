@@ -49,20 +49,24 @@ ISR(TIMER2_COMPA_vect) {
     // Transmit start bit (logical 0)
     setTimer1SpaceFreq();
     isStartBit = false;
+    Serial.println(OCR1A);
   }else if (bitCount < 8) {
     // Transmit data bits (LSB first)
     if (currentByte & (1 << bitCount)) {
       setTimer1MarkFreq();
       //Serial.print("1");
+      Serial.println(OCR1A);
     } else {
       setTimer1SpaceFreq();
       //Serial.print("0");
+      Serial.println(OCR1A);
     }
     bitCount++;
   } else {
     //Serial.print(" ");
     // Transmit stop bit (logical 1)
     setTimer1MarkFreq();
+    Serial.println(OCR1A);
     bitCount = 0;
     message++;
     if (*message) {
@@ -79,8 +83,8 @@ void loop() {
   while (transmitting) {
     // Wait for transmission to complete
   }
-  checkStates();
-  delay(1000);
+  //checkStates();
+  //delay(1000);
 }
 
 void timer1MarkSpace() {
