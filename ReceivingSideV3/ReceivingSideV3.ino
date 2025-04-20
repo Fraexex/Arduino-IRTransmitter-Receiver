@@ -1,6 +1,6 @@
 // Pins
 #define IR_PIN 2  // Digital pin (INT0) connected to LM311's diode OR output
-#define ANALOG_COMP_PIN 6  // AIN0 (analog comparator positive input)
+//#define ANALOG_COMP_PIN 6  // AIN0 (analog comparator positive input)
 #define REF_PIN 7  // AIN1 (analog comparator negative input) 0.4V reference
 #define DEBUG_LED 13 // Built-in LED to indicate activity
 
@@ -47,11 +47,13 @@ void setup() {
 
   Serial.begin(9600);
   Serial.println("IR Receiver Ready:");
+  analogWrite(REF_PIN, 10);
 }
 
 void loop() {
   processReceivedData();
   handleDebugOutput();
+  debug();
 }
 
 // ============ CORE FUNCTIONS ============
@@ -200,6 +202,14 @@ void handleDebugOutput() {
   }
 }
 
+void printVoltage() {
+  int raw = analogRead(IR_PIN);        // Read ADC (0-1023)
+  float voltage = raw * (5.0 / 1023.0);       // Convert to volts (5V Arduino)
+  Serial.print("Voltage: ");
+  Serial.print(voltage, 2);                   // Print with 2 decimal places
+  Serial.println("V");
+}
+
 void debug() {
   Serial.print("rxByte: ");
   Serial.println(receiver.rxByte);
@@ -209,4 +219,5 @@ void debug() {
   Serial.println(receiver.receiving);
   Serial.print("Last pulse edge: ");
   Serial.println(receiver.lastValidEdge);
+  printVoltage();
 }
