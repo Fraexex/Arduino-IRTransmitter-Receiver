@@ -27,6 +27,7 @@ typedef struct {
   volatile uint8_t rxByte;             // Stores received byte
   volatile uint8_t bitCount;           // Tracks bit position
   volatile bool receiving;             // Reception in progress
+
   volatile unsigned long lastEdge;
   volatile unsigned long lastValidEdge;     // Timestamp for pulse width
   volatile uint16_t debugPulseCount;
@@ -52,6 +53,7 @@ void setup() {
 
 void loop() {
   processReceivedData();
+
   handleDebugOutput();
   debug();
 }
