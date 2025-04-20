@@ -3,6 +3,8 @@
  */
 
 #define IR_LED_PIN 9 // Digital Pin 9 corresponds to ATmega328p's PB1 pin, which has Timer1 functionality
+#define PULSE_DURATION 600
+#define SPACE_DURATION 600
 
 volatile bool transmitting = false;
 volatile uint8_t currentByte = 0;
@@ -55,7 +57,7 @@ void loop() {
 }
 
 // Implementation of sendPulse & sendSpace
-void transmitMessage(const char* message) {
+void transmitMessage(const char* msg) {
   message = msg;
   currentByte = *message;
   bitCount = 0;
