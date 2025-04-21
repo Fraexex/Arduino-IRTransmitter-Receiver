@@ -5,10 +5,10 @@
 #define DEBUG_LED 13 // Built-in LED to indicate activity
 
 // Timing thresholds (adjust based on actual measurements)
-#define MARK_MIN_US   400   // ~436µs expected
-#define MARK_MAX_US   450   // ~436µs expected
-#define SPACE_MIN_US  451   // ~471µs expected
-#define SPACE_MAX_US  500   // ~471µs expected
+#define MARK_MIN_US   433   // ~436µs expected
+#define MARK_MAX_US   440   // ~436µs expected
+#define SPACE_MIN_US  452   // ~471µs expected
+#define SPACE_MAX_US  476   // ~471µs expected
 #define NOISE_THRESHOLD 100   // Ignore pulses shorter than this
 #define BIT_TIMEOUT     25000 // 25ms timeout for incomplete bytes (µs)
 
@@ -27,7 +27,6 @@ typedef struct {
   volatile uint8_t rxByte;             // Stores received byte
   volatile uint8_t bitCount;           // Tracks bit position
   volatile bool receiving;             // Reception in progress
-
   volatile unsigned long lastEdge;
   volatile unsigned long lastValidEdge;     // Timestamp for pulse width
   volatile uint16_t debugPulseCount;
@@ -53,7 +52,6 @@ void setup() {
 
 void loop() {
   processReceivedData();
-
   handleDebugOutput();
   debug();
 }
